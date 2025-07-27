@@ -8,8 +8,9 @@ import { useUsers } from '../hooks/useUsers';
 import { formatCurrency } from '../lib/utils';
 import { initializeDatabase } from '../lib/database-init';
 import { Product, InvoiceItem, Client, Category, User, db } from '../lib/database';
-import { printInvoice, generateInvoicePDF, generateInvoicesCSV, downloadCSV, generateInvoiceHTML } from '../lib/invoice-generator';
+import { printInvoice, generateInvoicePDF, generateInvoicesCSV, downloadCSV, generateInvoiceHTML, numeroALetras } from '../lib/invoice-generator';
 import Login from '../components/Login';
+import { POSPage } from '../components/POS';
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -556,183 +557,86 @@ export default function Dashboard() {
   };
 
   const renderNewInvoice = () => {
-    return React.createElement('div', { className: 'bg-white rounded-lg shadow p-6' },
-      React.createElement('div', { className: 'flex items-center justify-between mb-6' },
-        React.createElement('h2', { className: 'text-2xl font-bold text-gray-900' }, '🧾 Nueva Factura'),
-        React.createElement('div', { className: 'text-sm text-gray-500' },
-          `Factura #${config?.invoicePrefix || 'FAC'}-${String(getInvoiceCount() + 1).padStart(6, '0')}`
-        )
-      ),
+    const handlePOSCreateInvoice = (items: any[], total: number, paidAmount: number) => {
+      // Crear la factura usando la funcionalidad existente
+      const selectedClient = clients.find(c => c.id === selectedClientId) || getActiveClients()[0];
       
-      // Información del Cliente
-      React.createElement('div', { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
-        React.createElement('h3', { className: 'text-lg font-semibold text-gray-900 mb-4' }, '👤 Información del Cliente'),
-        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-          React.createElement('div', {},
-            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Seleccionar Cliente *'),
-            React.createElement('select', { 
-              value: selectedClientId,
-              onChange: (e: any) => {
-                setSelectedClientId(e.target.value);
-                const selectedClient = clients.find(c => c.id === e.target.value);
-                if (selectedClient) {
-                  setInvoiceForm(prev => ({
-                    ...prev, 
-                    clientName: selectedClient.name,
-                    clientRtn: selectedClient.rtn || ''
-                  }));
-                }
-              },
-              className: 'mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500',
-              required: true
-            },
-              React.createElement('option', { value: '' }, 'Seleccione un cliente...'),
-              getActiveClients().map(client => 
-                React.createElement('option', { key: client.id, value: client.id }, client.name)
-              )
-            )
-          ),
-          React.createElement('div', {},
-            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'RTN del Cliente'),
-            React.createElement('input', { 
-              type: 'text',
-              value: invoiceForm.clientRtn,
-              readOnly: true,
-              className: 'mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-600',
-              placeholder: 'Se auto-completa al seleccionar cliente'
-            })
-          )
-        ),
-        // Botón para agregar nuevo cliente rápido
-        React.createElement('div', { className: 'mt-4' },
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => setShowClients(true),
-            className: 'text-sm text-blue-600 hover:text-blue-800 font-medium'
-          }, '+ Agregar nuevo cliente')
-        )
-      ),
+      if (!selectedClient) {
+        alert('Por favor seleccione un cliente válido');
+        return;
+      }
+      
+      // Convertir items del POS al formato esperado por createInvoice
+      const invoiceItems = items.map(item => {
+        const product = products.find(p => p.sku === item.sku);
+        const itemTax = item.total * (config?.taxRate || 0.15);
+        return {
+          productId: product?.id || '',
+          productName: item.name,
+          sku: item.sku,
+          quantity: item.quantity,
+          unitPrice: item.salePrice,
+          tax: itemTax,
+          total: item.total + itemTax
+        };
+      });
+      
+      try {
+        const newInvoice = createInvoice(
+          selectedClient.name,
+          selectedClient.rtn || '',
+          invoiceItems
+        );
+        
+        // Agregar campo totalLetras para el PDF
+        const invoiceWithLetters = {
+          ...newInvoice,
+          totalLetras: numeroALetras(newInvoice.total),
+          status: 'paid' as const
+        };
+        
+        // Actualizar la factura en la base de datos con el campo totalLetras
+        if (newInvoice.id) {
+          db.invoices.update(newInvoice.id, invoiceWithLetters);
+        }
+        
+        // Actualizar stock de productos
+        items.forEach(item => {
+          const product = products.find(p => p.sku === item.sku);
+          if (product) {
+            const updatedProduct = {
+              ...product,
+              currentStock: Math.max(0, product.currentStock - item.quantity)
+            };
+            updateProduct(product.id, updatedProduct);
+          }
+        });
+        
+        // Generar PDF automáticamente
+        setTimeout(() => {
+          generateInvoicePDF(invoiceWithLetters, config);
+        }, 500);
+        
+        // Refrescar datos
+        refresh();
+        const allInvoices = db.invoices.getAll();
+        setInvoices(allInvoices);
+        
+      } catch (error) {
+        console.error('Error creating invoice:', error);
+        alert('Error al crear la factura. Por favor intente nuevamente.');
+      }
+    };
 
-      // Seleccionar Productos
-      React.createElement('div', { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
-        React.createElement('h3', { className: 'text-lg font-semibold text-gray-900 mb-4' }, '📦 Agregar Productos'),
-        React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
-          products.length > 0 ? 
-            products.map((product) => 
-              React.createElement('div', { 
-                key: product.id,
-                className: 'border border-gray-200 rounded-lg p-3 hover:border-blue-500 transition-colors cursor-pointer' 
-              },
-                React.createElement('div', { className: 'flex flex-col h-full' },
-                  React.createElement('h4', { className: 'font-medium text-gray-900 text-sm' }, product.name),
-                  React.createElement('p', { className: 'text-xs text-gray-600' }, `SKU: ${product.sku}`),
-                  React.createElement('p', { className: 'text-xs text-gray-600' }, `Stock: ${product.currentStock}`),
-                  React.createElement('p', { className: 'text-lg font-bold text-green-600 mt-2' }, formatCurrency(product.salePrice)),
-                  React.createElement('button', { 
-                    type: 'button',
-                    onClick: () => addProductToInvoice(product.id),
-                    disabled: product.currentStock === 0,
-                    className: `mt-2 w-full px-3 py-1 text-sm rounded ${
-                      product.currentStock === 0 
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`
-                  }, product.currentStock === 0 ? 'Sin Stock' : '+ Agregar')
-                )
-              )
-            ) : 
-            React.createElement('p', { className: 'text-gray-500 col-span-full text-center py-8' }, 'No hay productos disponibles')
-        )
-      ),
-
-      // Tabla de Productos en la Factura
-      invoiceItems.length > 0 ? 
-        React.createElement('div', { className: 'mb-6' },
-          React.createElement('h3', { className: 'text-lg font-semibold text-gray-900 mb-4' }, '📋 Productos en la Factura'),
-          React.createElement('div', { className: 'overflow-x-auto' },
-            React.createElement('table', { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
-              React.createElement('thead', { className: 'bg-gray-50' },
-                React.createElement('tr', {},
-                  React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase' }, 'Producto'),
-                  React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase' }, 'Precio Unit.'),
-                  React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase' }, 'Cantidad'),
-                  React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase' }, 'Subtotal'),
-                  React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase' }, 'Acciones')
-                )
-              ),
-              React.createElement('tbody', { className: 'divide-y divide-gray-200' },
-                invoiceItems.map((item) => 
-                  React.createElement('tr', { key: item.productId },
-                    React.createElement('td', { className: 'px-4 py-2' },
-                      React.createElement('div', {},
-                        React.createElement('div', { className: 'font-medium text-gray-900' }, item.productName),
-                        React.createElement('div', { className: 'text-sm text-gray-500' }, `SKU: ${item.sku}`)
-                      )
-                    ),
-                    React.createElement('td', { className: 'px-4 py-2 text-gray-900' }, formatCurrency(item.unitPrice)),
-                    React.createElement('td', { className: 'px-4 py-2' },
-                      React.createElement('input', { 
-                        type: 'number',
-                        min: '1',
-                        value: item.quantity,
-                        onChange: (e: any) => updateInvoiceItemQuantity(item.productId, parseInt(e.target.value) || 0),
-                        className: 'w-16 border border-gray-300 rounded px-2 py-1 text-center'
-                      })
-                    ),
-                    React.createElement('td', { className: 'px-4 py-2 font-medium text-gray-900' }, formatCurrency(item.subtotal)),
-                    React.createElement('td', { className: 'px-4 py-2' },
-                      React.createElement('button', { 
-                        type: 'button',
-                        onClick: () => removeProductFromInvoice(item.productId),
-                        className: 'text-red-600 hover:text-red-800 text-sm'
-                      }, '🗑️')
-                    )
-                  )
-                )
-              )
-            )
-          ),
-
-          // Totales
-          React.createElement('div', { className: 'mt-4 bg-gray-50 p-4 rounded-lg' },
-            React.createElement('div', { className: 'flex justify-end' },
-              React.createElement('div', { className: 'w-64' },
-                React.createElement('div', { className: 'flex justify-between py-1' },
-                  React.createElement('span', { className: 'text-gray-600' }, 'Subtotal:'),
-                  React.createElement('span', { className: 'font-medium' }, formatCurrency(invoiceTotals.subtotal))
-                ),
-                React.createElement('div', { className: 'flex justify-between py-1' },
-                  React.createElement('span', { className: 'text-gray-600' }, `Impuesto (${((config?.taxRate || 0.15) * 100).toFixed(1)}%):`),
-                  React.createElement('span', { className: 'font-medium' }, formatCurrency(invoiceTotals.tax))
-                ),
-                React.createElement('div', { className: 'flex justify-between py-2 border-t border-gray-300 font-bold text-lg' },
-                  React.createElement('span', {}, 'Total:'),
-                  React.createElement('span', { className: 'text-green-600' }, formatCurrency(invoiceTotals.total))
-                )
-              )
-            )
-          )
-        ) : null,
-
-      // Botones de Acción
-      React.createElement('div', { className: 'flex space-x-4 pt-4 border-t border-gray-200' },
-        React.createElement('button', { 
-          type: 'button',
-          onClick: handleInvoiceSubmit,
-          disabled: invoiceItems.length === 0 || !invoiceForm.clientName.trim(),
-          className: `px-6 py-2 rounded font-medium ${
-            invoiceItems.length === 0 || !invoiceForm.clientName.trim()
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`
-        }, '💾 Crear Factura'),
-        React.createElement('button', { 
-          type: 'button',
-          onClick: clearInvoice,
-          className: 'bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700'
-        }, '🗑️ Limpiar Todo')
-      )
-    );
+    return React.createElement(POSPage, {
+      onClientClick: () => setCurrentView('clients'),
+      onProductClick: () => setCurrentView('products'),
+      onInventoryClick: () => setShowStockAlerts(true),
+      onConfigClick: () => setCurrentView('settings'),
+      onCutClick: () => setCurrentView('reports'),
+      onExitClick: () => setCurrentView('dashboard'),
+      onCreateInvoice: handlePOSCreateInvoice
+    });
   };
 
   const renderProducts = () => {
