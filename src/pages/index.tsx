@@ -2158,7 +2158,7 @@ export default function Dashboard() {
       ),
 
       // Contenido principal
-      React.createElement('div', { className: 'flex-1 overflow-auto' },
+      React.createElement('div', { className: 'flex-1 overflow-auto pb-12' },
         React.createElement('main', { className: 'p-6' },
           // Renderizar vista actual
           currentView === 'dashboard' ? renderDashboard() :
@@ -2176,6 +2176,15 @@ export default function Dashboard() {
             React.createElement('h2', { className: 'text-2xl font-bold text-gray-900 mb-2' }, 'Funcionalidad en Desarrollo'),
             React.createElement('p', { className: 'text-gray-600' }, `La sección "${currentView}" estará disponible próximamente.`)
           )
+        ),
+        
+        // Footer fijo
+        React.createElement('div', { 
+          className: 'fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-90 text-white text-center py-2 text-xs z-50',
+          style: { backdropFilter: 'blur(10px)' }
+        },
+          React.createElement('span', {}, '© 2025 Copyright | Desarrollo por '),
+          React.createElement('strong', {}, 'ALLAN MEDINA')
         )
       )
     )

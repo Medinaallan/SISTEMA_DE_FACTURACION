@@ -14,7 +14,7 @@ export const useConfig = () => {
     companyWebsite: 'www.miempresa.hn',
     taxRate: 0.15,
     currencySymbol: 'L',
-    invoicePrefix: 'FACT-',
+    invoicePrefix: 'FACT-001-001-01-',
     lastInvoiceNumber: 0,
     lowStockAlert: 10,
     autoBackup: true,
