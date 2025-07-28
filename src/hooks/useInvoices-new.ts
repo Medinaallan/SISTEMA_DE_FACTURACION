@@ -14,7 +14,7 @@ export function useInvoices() {
   };
 
   const generateInvoiceNumber = (): string => {
-    const currentConfig = config || { invoicePrefix: 'FACT-', lastInvoiceNumber: 0 };
+    const currentConfig = config || { invoicePrefix: 'FACT-001-001-01-', lastInvoiceNumber: 0 };
     const newNumber = currentConfig.lastInvoiceNumber + 1;
     
     // Actualizar el número de factura en la configuración

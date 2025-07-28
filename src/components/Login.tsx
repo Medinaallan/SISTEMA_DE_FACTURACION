@@ -31,7 +31,7 @@ export default function Login({ onLogin }: LoginProps) {
     }, 1000);
   };
 
-  return React.createElement('div', { className: 'min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4' },
+  return React.createElement('div', { className: 'min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4 pb-12' },
     React.createElement('div', { className: 'max-w-md w-full' },
       // Logo y título
       React.createElement('div', { className: 'text-center mb-8' },
@@ -103,6 +103,15 @@ export default function Login({ onLogin }: LoginProps) {
           )
         )
       )
+    ),
+    
+    // Footer fijo
+    React.createElement('div', { 
+      className: 'fixed bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-center py-2 text-xs',
+      style: { backdropFilter: 'blur(10px)' }
+    },
+      React.createElement('span', {}, '© 2025 Copyright | Desarrollo por '),
+      React.createElement('strong', {}, 'ALLAN MEDINA')
     )
   );
 }

@@ -14,8 +14,8 @@
 ## 🚀 PASO 2: Configurar Git (Primera vez)
 
 ```bash
-git config --global user.name "Tu Nombre"
-git config --global user.email "tu-email@gmail.com"
+git config --global user.name "Medinaallan"
+git config --global user.email "medinaallan369@gmail.com"
 ```
 
 ## 📂 PASO 3: Inicializar Repositorio
