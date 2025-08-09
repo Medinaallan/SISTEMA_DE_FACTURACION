@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useProducts } from '../../hooks/useProducts';
 import { useClients } from '../../hooks/useClients';
 import { useInvoices } from '../../hooks/useInvoices';
+import { useCashRegister } from '../../hooks/useCashRegister';
 import HeaderMenu from './HeaderMenu';
 import ProductInput from './ProductInput';
 import ActionButtons from './ActionButtons';
 import ProductTable from './ProductTable';
 import SaleSummary from './SaleSummary';
+import OpenCashModal from './OpenCashModal';
+import CloseCashModal from './CloseCashModal';
 import { formatCurrency } from '../../lib/utils';
 
 interface POSItem {
@@ -41,6 +44,14 @@ export default function POSPage({
   const { products } = useProducts();
   const { clients, loadClients } = useClients();
   const { invoices, loadInvoices } = useInvoices();
+  const { 
+    currentSession, 
+    openCashRegister, 
+    closeCashRegister, 
+    registerSale, 
+    hasOpenSession 
+  } = useCashRegister();
+  
   const [currentItems, setCurrentItems] = useState<POSItem[]>([]);
   const [productCode, setProductCode] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string>('');
@@ -53,6 +64,8 @@ export default function POSPage({
   const [showEntriesModal, setShowEntriesModal] = useState(false);
   const [showExitsModal, setShowExitsModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showOpenCashModal, setShowOpenCashModal] = useState(false);
+  const [showCloseCashModal, setShowCloseCashModal] = useState(false);
   
   // Estados para formularios
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,6 +78,13 @@ export default function POSPage({
     loadClients();
     loadInvoices();
   }, [loadClients, loadInvoices]);
+
+  // Mostrar modal de apertura de caja si no hay sesión abierta
+  useEffect(() => {
+    if (!hasOpenSession()) {
+      setShowOpenCashModal(true);
+    }
+  }, [hasOpenSession]);
 
   // Calcular total
   const total = currentItems.reduce((sum, item) => sum + item.total, 0);
@@ -196,6 +216,48 @@ export default function POSPage({
     }
   };
 
+  // Función para abrir caja
+  const handleOpenCash = (startingCash: number) => {
+    // Obtener datos del usuario actual (simulado)
+    const userId = '1';
+    const userName = 'Usuario POS';
+    
+    openCashRegister(startingCash, userId, userName);
+    setShowOpenCashModal(false);
+    alert(`¡Caja abierta exitosamente!\nFondo inicial: ${formatCurrency(startingCash)}`);
+  };
+
+  // Función para cerrar caja 
+  const handleCloseCash = (cashCount: number, cardCount: number, transferCount: number) => {
+    const closedSession = closeCashRegister(cashCount, cardCount, transferCount);
+    
+    if (closedSession) {
+      const message = `🔒 CIERRE DE CAJA REALIZADO\n\n` +
+        `💰 Resumen Final:\n` +
+        `• Efectivo esperado: ${formatCurrency(closedSession.expectedCash)}\n` +
+        `• Efectivo contado: ${formatCurrency(cashCount)}\n` +
+        `• Diferencia: ${formatCurrency(closedSession.difference)}\n` +
+        `• Ventas tarjeta: ${formatCurrency(cardCount)}\n` +
+        `• Transferencias: ${formatCurrency(transferCount)}\n` +
+        `• Total ventas: ${formatCurrency(closedSession.totalSales)}\n\n` +
+        `${closedSession.difference === 0 ? '✅ Caja cuadrada' : 
+          closedSession.difference > 0 ? '📈 Sobrante en caja' : '📉 Faltante en caja'}`;
+      
+      alert(message);
+      setShowCloseCashModal(false);
+      
+      // Limpiar el ticket actual
+      setCurrentItems([]);
+      setProductCode('');
+      setSelectedItemId('');
+      
+      // Mostrar modal de apertura para siguiente turno
+      setTimeout(() => {
+        setShowOpenCashModal(true);
+      }, 1000);
+    }
+  };
+
   // Procesar pago
   const handlePay = (paidAmount: number) => {
     if (currentItems.length === 0) {
@@ -203,9 +265,18 @@ export default function POSPage({
       return;
     }
 
+    if (!hasOpenSession()) {
+      alert('No hay una caja abierta. Abra una caja para continuar.');
+      setShowOpenCashModal(true);
+      return;
+    }
+
     // Crear la factura
     onCreateInvoice(currentItems, total, paidAmount);
     
+    // Registrar la venta en la caja (asumir efectivo por defecto)
+    registerSale(total, 'cash');
+
     // Guardar para reimprimir
     setLastInvoice({
       items: [...currentItems],
@@ -281,6 +352,8 @@ export default function POSPage({
           onConfigClick={onConfigClick}
           onCutClick={onCutClick}
           onExitClick={onExitClick}
+          onCloseCashClick={() => setShowCloseCashModal(true)}
+          hasOpenSession={hasOpenSession()}
         />
       </div>
 
@@ -605,6 +678,26 @@ export default function POSPage({
           </div>
         </div>
       )}
+
+      {/* Modal de Apertura de Caja */}
+      <OpenCashModal
+        isOpen={showOpenCashModal}
+        onClose={() => {
+          // No permitir cerrar si no hay sesión abierta
+          if (hasOpenSession()) {
+            setShowOpenCashModal(false);
+          }
+        }}
+        onOpenCash={handleOpenCash}
+      />
+
+      {/* Modal de Cierre de Caja */}
+      <CloseCashModal
+        isOpen={showCloseCashModal}
+        onClose={() => setShowCloseCashModal(false)}
+        onCloseCash={handleCloseCash}
+        currentSession={currentSession}
+      />
     </div>
   );
 }

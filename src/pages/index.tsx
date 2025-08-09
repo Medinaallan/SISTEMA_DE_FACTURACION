@@ -11,6 +11,7 @@ import { Product, InvoiceItem, Client, Category, User, db } from '../lib/databas
 import { printInvoice, generateInvoicePDF, generateInvoicesCSV, downloadCSV, generateInvoiceHTML, numeroALetras } from '../lib/invoice-generator';
 import Login from '../components/Login';
 import { POSPage } from '../components/POS';
+import { CashReportsPage } from '../components/CashReports';
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [showClients, setShowClients] = useState(false);
   const [showInvoiceList, setShowInvoiceList] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showCashReports, setShowCashReports] = useState(false);
   
   // Estados para edición
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -529,6 +531,52 @@ export default function Dashboard() {
                 )
               ) :
               React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Todos los productos tienen stock suficiente')
+          )
+        )
+      ),
+
+      // Accesos Rápidos
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-6 mb-8' },
+        React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer' },
+          React.createElement('button', { 
+            onClick: () => setCurrentView('invoices'),
+            className: 'w-full text-left'
+          },
+            React.createElement('div', { className: 'flex items-center' },
+              React.createElement('div', { className: 'text-3xl mr-4' }, '🧾'),
+              React.createElement('div', {},
+                React.createElement('h3', { className: 'text-lg font-semibold text-gray-900' }, 'Nueva Factura'),
+                React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Crear una nueva factura')
+              )
+            )
+          )
+        ),
+        React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer' },
+          React.createElement('button', { 
+            onClick: () => setCurrentView('products'),
+            className: 'w-full text-left'
+          },
+            React.createElement('div', { className: 'flex items-center' },
+              React.createElement('div', { className: 'text-3xl mr-4' }, '📦'),
+              React.createElement('div', {},
+                React.createElement('h3', { className: 'text-lg font-semibold text-gray-900' }, 'Productos'),
+                React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Gestionar inventario')
+              )
+            )
+          )
+        ),
+        React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer' },
+          React.createElement('button', { 
+            onClick: () => setCurrentView('cash-reports'),
+            className: 'w-full text-left'
+          },
+            React.createElement('div', { className: 'flex items-center' },
+              React.createElement('div', { className: 'text-3xl mr-4' }, '💰'),
+              React.createElement('div', {},
+                React.createElement('h3', { className: 'text-lg font-semibold text-gray-900' }, 'Cierres de Caja'),
+                React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Ver reportes de cierres')
+              )
+            )
           )
         )
       ),
@@ -2128,6 +2176,10 @@ export default function Dashboard() {
                 className: `${currentView === 'reports' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} group flex items-center px-2 py-2 text-sm font-medium rounded-md w-full text-left`
               }, '📈 Ventas'),
               React.createElement('button', { 
+                onClick: () => setCurrentView('cash-reports'),
+                className: `${currentView === 'cash-reports' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} group flex items-center px-2 py-2 text-sm font-medium rounded-md w-full text-left`
+              }, '💰 Cierres de Caja'),
+              React.createElement('button', { 
                 onClick: () => setCurrentView('financial-reports'),
                 className: `${currentView === 'financial-reports' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} group flex items-center px-2 py-2 text-sm font-medium rounded-md w-full text-left`
               }, '💰 Financieros'),
@@ -2166,6 +2218,7 @@ export default function Dashboard() {
           currentView === 'products' ? renderProducts() :
           currentView === 'settings' ? renderSettings() :
           currentView === 'reports' ? renderReports() :
+          currentView === 'cash-reports' ? React.createElement(CashReportsPage, { onBack: () => setCurrentView('dashboard') }) :
           currentView === 'stock-alerts' ? renderStockAlerts() :
           currentView === 'categories' ? renderCategories() :
           currentView === 'clients' ? renderClients() :

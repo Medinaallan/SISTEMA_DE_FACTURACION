@@ -432,242 +432,50 @@ export function generateInvoicesCSV(invoices: Invoice[]): string {
   return csvContent;
 }
 
-// Función para generar PDF con formato SAR idéntico a la previsualización
+// Función para generar PDF con formato SAR idéntico al botón Imprimir
 export async function generateInvoicePDF(invoice: Invoice, config: Configuration): Promise<void> {
   try {
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF('p', 'mm', 'letter');
+    // Generar el HTML usando la misma función que printInvoice
+    const html = generateInvoiceHTML(invoice, config);
     
-    // Configuración de fuente
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(10);
-    
-    let yPos = 20;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    const usableWidth = pageWidth - (margin * 2);
-    
-    // ===============================
-    // ENCABEZADO EMPRESA (centrado con bordes)
-    // ===============================
-    doc.setFontSize(14);
-    doc.setFont('courier', 'bold');
-    
-    // Borde superior del encabezado
-    doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
-    doc.line(margin, yPos - 5, margin, yPos + 25);
-    doc.line(pageWidth - margin, yPos - 5, pageWidth - margin, yPos + 25);
-    
-    doc.text((config?.companyName || 'MI EMPRESA').toUpperCase(), pageWidth / 2, yPos, { align: 'center' });
-    yPos += 6;
-    
-    doc.setFontSize(10);
-    doc.setFont('courier', 'normal');
-    doc.text(`RTN: ${config?.companyRtn || 'N/A'}`, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    doc.text(config?.companyAddress || 'Dirección no configurada', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    doc.text(`Tel: ${config?.companyPhone || 'N/A'}`, pageWidth / 2, yPos, { align: 'center' });
-    yPos += 6;
-    
-    doc.setFont('courier', 'bold');
-    doc.setFontSize(12);
-    // Subrayado para FACTURA COMERCIAL
-    const facturaText = 'FACTURA COMERCIAL';
-    const facturaWidth = doc.getTextWidth(facturaText);
-    doc.text(facturaText, pageWidth / 2, yPos, { align: 'center' });
-    doc.line(pageWidth / 2 - facturaWidth / 2, yPos + 1, pageWidth / 2 + facturaWidth / 2, yPos + 1);
-    
-    // Borde inferior del encabezado
-    doc.line(margin, yPos + 5, pageWidth - margin, yPos + 5);
-    yPos += 12;
-    
-    // ===============================
-    // INFORMACIÓN SAR (caja con borde)
-    // ===============================
-    doc.setFontSize(8);
-    doc.setFont('courier', 'normal');
-    const sarHeight = 12;
-    doc.rect(margin, yPos, usableWidth, sarHeight);
-    yPos += 3;
-    
-    const caiText = `CAI: ${invoice.cai} | Rango: ${invoice.rangoAutorizado || 'N/A'} | Fecha Límite: ${invoice.fechaLimiteEmision || 'N/A'}`;
-    doc.text(caiText, pageWidth / 2, yPos + 6, { align: 'center' });
-    yPos += sarHeight + 8;
-    
-    // ===============================
-    // INFORMACIÓN DE FACTURA (dos columnas)
-    // ===============================
-    doc.setFontSize(10);
-    doc.setFont('courier', 'normal');
-    
-    // Columna izquierda
-    doc.text(`No. Factura: ${invoice.invoiceNumber}`, margin, yPos);
-    doc.text(`Correlativo: ${(invoice.correlativo || 1).toString().padStart(8, '0')}`, margin, yPos + 5);
-    doc.text(`Fecha: ${new Date(invoice.fechaEmision || invoice.createdAt).toLocaleDateString('es-HN')}`, margin, yPos + 10);
-    
-    // Columna derecha
-    doc.text(`Moneda: ${invoice.codigoMoneda || 'HNL'}`, pageWidth - margin - 50, yPos);
-    doc.text(`Estado: ${invoice.status?.toUpperCase() || 'PAGADA'}`, pageWidth - margin - 50, yPos + 5);
-    yPos += 20;
-    
-    // ===============================
-    // INFORMACIÓN DEL CLIENTE (caja con borde)
-    // ===============================
-    const clientHeight = invoice.clientRtn ? 20 : 15;
-    doc.rect(margin, yPos, usableWidth, clientHeight);
-    yPos += 4;
-    
-    doc.setFont('courier', 'bold');
-    doc.text('FACTURAR A:', margin + 2, yPos);
-    yPos += 5;
-    
-    doc.setFont('courier', 'normal');
-    doc.text(`Cliente: ${invoice.clientName}`, margin + 2, yPos);
-    yPos += 4;
-    
-    if (invoice.clientRtn) {
-      doc.text(`RTN: ${invoice.clientRtn}`, margin + 2, yPos);
-      yPos += 4;
+    // Crear una ventana temporal oculta para generar el PDF
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      
+      // Esperar a que cargue el contenido
+      setTimeout(() => {
+        // Usar la API de impresión del navegador para generar PDF
+        printWindow.print();
+        
+        // Cerrar la ventana después de un tiempo
+        setTimeout(() => {
+          printWindow.close();
+        }, 1000);
+      }, 500);
+    } else {
+      // Fallback: crear un elemento temporal y usar la funcionalidad de descarga
+      const element = document.createElement('div');
+      element.innerHTML = html;
+      element.style.position = 'fixed';
+      element.style.top = '-9999px';
+      element.style.left = '-9999px';
+      document.body.appendChild(element);
+      
+      // Crear un blob con el HTML y descargarlo
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Factura_${invoice.invoiceNumber}.html`;
+      link.click();
+      
+      URL.revokeObjectURL(url);
+      document.body.removeChild(element);
+      
+      alert('Se ha descargado un archivo HTML. Ábrelo en tu navegador y usa Ctrl+P para generar el PDF.');
     }
-    
-    if (invoice.clientAddress) {
-      doc.text(`Dirección: ${invoice.clientAddress}`, margin + 2, yPos);
-      yPos += 4;
-    }
-    yPos += 8;
-    
-    // ===============================
-    // TABLA DE PRODUCTOS (con bordes completos)
-    // ===============================
-    const tableHeaders = ['No.', 'DESCRIPCIÓN', 'CANT.', 'PRECIO UNIT.', 'TOTAL'];
-    const colWidths = [15, 85, 20, 30, 30];
-    let xPos = margin;
-    
-    // Encabezados de tabla con fondo gris
-    doc.setFont('courier', 'bold');
-    doc.setFillColor(240, 240, 240);
-    doc.rect(margin, yPos, usableWidth, 8, 'FD');
-    
-    // Bordes verticales y texto de encabezados
-    xPos = margin;
-    for (let i = 0; i < tableHeaders.length; i++) {
-      doc.text(tableHeaders[i], xPos + 2, yPos + 5);
-      if (i < colWidths.length - 1) {
-        doc.line(xPos + colWidths[i], yPos, xPos + colWidths[i], yPos + 8);
-      }
-      xPos += colWidths[i];
-    }
-    yPos += 8;
-    
-    // Filas de productos con bordes completos
-    doc.setFont('courier', 'normal');
-    doc.setFillColor(255, 255, 255);
-    
-    invoice.items?.forEach((item: any, index: number) => {
-      xPos = margin;
-      
-      // Fila completa con borde
-      doc.rect(margin, yPos, usableWidth, 6);
-      
-      // Columna No.
-      doc.text((index + 1).toString(), xPos + 2, yPos + 4);
-      xPos += colWidths[0];
-      doc.line(xPos, yPos, xPos, yPos + 6);
-      
-      // Columna Descripción
-      const description = `${item.productName} (SKU: ${item.sku})`;
-      doc.text(description.substring(0, 35), xPos + 2, yPos + 4);
-      xPos += colWidths[1];
-      doc.line(xPos, yPos, xPos, yPos + 6);
-      
-      // Columna Cantidad
-      doc.text(item.quantity.toString(), xPos + 15, yPos + 4, { align: 'right' });
-      xPos += colWidths[2];
-      doc.line(xPos, yPos, xPos, yPos + 6);
-      
-      // Columna Precio Unitario
-      doc.text(formatCurrency(item.unitPrice), xPos + 25, yPos + 4, { align: 'right' });
-      xPos += colWidths[3];
-      doc.line(xPos, yPos, xPos, yPos + 6);
-      
-      // Columna Total
-      doc.text(formatCurrency(item.total), xPos + 25, yPos + 4, { align: 'right' });
-      
-      yPos += 6;
-    });
-    
-    yPos += 10;
-    
-    // ===============================
-    // TOTAL EN LETRAS (caja con borde)
-    // ===============================
-    const letrasHeight = 15;
-    doc.rect(margin, yPos, usableWidth, letrasHeight);
-    yPos += 4;
-    
-    doc.setFont('courier', 'bold');
-    const totalEnLetras = invoice.totalLetras || numeroALetras(invoice.total);
-    doc.text(`SON: ${totalEnLetras.toUpperCase()}`, margin + 2, yPos + 6);
-    yPos += letrasHeight + 10;
-    
-    // ===============================
-    // RESUMEN DE TOTALES (caja en la derecha)
-    // ===============================
-    const totalBoxWidth = 80;
-    const totalBoxHeight = 20;
-    const totalXPos = pageWidth - margin - totalBoxWidth;
-    
-    doc.rect(totalXPos, yPos, totalBoxWidth, totalBoxHeight);
-    
-    let totalYPos = yPos + 4;
-    doc.setFont('courier', 'normal');
-    doc.text('Subtotal:', totalXPos + 2, totalYPos);
-    doc.text(formatCurrency(invoice.subtotal), totalXPos + totalBoxWidth - 2, totalYPos, { align: 'right' });
-    totalYPos += 4;
-    
-    doc.text('ISV 15%:', totalXPos + 2, totalYPos);
-    doc.text(formatCurrency(invoice.tax), totalXPos + totalBoxWidth - 2, totalYPos, { align: 'right' });
-    totalYPos += 4;
-    
-    // Línea separadora antes del total
-    doc.line(totalXPos + 2, totalYPos, totalXPos + totalBoxWidth - 2, totalYPos);
-    totalYPos += 4;
-    
-    doc.setFont('courier', 'bold');
-    doc.text('TOTAL:', totalXPos + 2, totalYPos);
-    doc.text(formatCurrency(invoice.total), totalXPos + totalBoxWidth - 2, totalYPos, { align: 'right' });
-    
-    yPos += totalBoxHeight + 40;
-    
-    // ===============================
-    // FIRMAS
-    // ===============================
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(10);
-    
-    const signatureY = yPos;
-    const signatureSpacing = usableWidth / 2;
-    
-    // Líneas para firmas
-    doc.line(margin + 20, signatureY, margin + 70, signatureY);
-    doc.line(pageWidth - margin - 70, signatureY, pageWidth - margin - 20, signatureY);
-    
-    // Texto de firmas
-    doc.text('Firma del Cliente', margin + 45, signatureY + 5, { align: 'center' });
-    doc.text('Firma y Sello', pageWidth - margin - 45, signatureY + 5, { align: 'center' });
-    
-    yPos += 15;
-    
-    // ===============================
-    // PIE DE PÁGINA
-    // ===============================
-    doc.setFont('courier', 'bold');
-    doc.setFontSize(10);
-    doc.text('La factura es beneficio de todos. Exíjala.', pageWidth / 2, yPos, { align: 'center' });
-    
-    // Descargar PDF
-    doc.save(`Factura_SAR_${invoice.invoiceNumber}.pdf`);
     
   } catch (error) {
     console.error('Error generando PDF:', error);

@@ -7,6 +7,8 @@ interface HeaderMenuProps {
   onConfigClick: () => void;
   onCutClick: () => void;
   onExitClick: () => void;
+  onCloseCashClick: () => void;
+  hasOpenSession?: boolean;
 }
 
 export default function HeaderMenu({
@@ -15,7 +17,9 @@ export default function HeaderMenu({
   onInventoryClick,
   onConfigClick,
   onCutClick,
-  onExitClick
+  onExitClick,
+  onCloseCashClick,
+  hasOpenSession = false
 }: HeaderMenuProps) {
   return (
     <div className="bg-blue-900 text-white p-3 flex justify-between items-center">
@@ -54,6 +58,15 @@ export default function HeaderMenu({
         >
           Corte
         </button>
+
+        {hasOpenSession && (
+          <button
+            onClick={onCloseCashClick}
+            className="bg-red-700 hover:bg-red-600 px-4 py-2 rounded transition-colors font-semibold"
+          >
+            🔒 Cierre de Caja
+          </button>
+        )}
       </div>
       
       <button
