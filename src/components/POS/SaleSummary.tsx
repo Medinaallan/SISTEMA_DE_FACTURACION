@@ -4,7 +4,6 @@ import { formatCurrency } from '../../lib/utils';
 interface SaleSummaryProps {
   total: number;
   onPay: (paidAmount: number) => void;
-  onChange: () => void;
   onPending: () => void;
   onDeleteProduct: () => void;
   onReprint: () => void;
@@ -15,7 +14,6 @@ interface SaleSummaryProps {
 export default function SaleSummary({
   total,
   onPay,
-  onChange,
   onPending,
   onDeleteProduct,
   onReprint,
@@ -109,15 +107,7 @@ export default function SaleSummary({
       )}
 
       {/* Botones de Acción */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-        <button
-          onClick={onChange}
-          disabled={disabled}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded transition-colors"
-        >
-          <span className="text-yellow-300">F5</span> Cambiar
-        </button>
-        
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
         <button
           onClick={onPending}
           disabled={disabled}

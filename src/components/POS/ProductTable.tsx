@@ -30,19 +30,19 @@ export default function ProductTable({
         <table className="w-full">
           <thead className="bg-gray-100 sticky top-0">
             <tr>
-              <th className="text-left p-3 border-b font-semibold">Código</th>
-              <th className="text-left p-3 border-b font-semibold">Descripción</th>
-              <th className="text-right p-3 border-b font-semibold">Precio</th>
-              <th className="text-center p-3 border-b font-semibold">Cantidad</th>
-              <th className="text-right p-3 border-b font-semibold">Importe</th>
-              <th className="text-center p-3 border-b font-semibold">Existencia</th>
-              <th className="text-center p-3 border-b font-semibold">Acciones</th>
+              <th className="text-left p-2 border-b font-semibold text-sm">Código</th>
+              <th className="text-left p-2 border-b font-semibold text-sm">Descripción</th>
+              <th className="text-right p-2 border-b font-semibold text-sm">Precio</th>
+              <th className="text-center p-2 border-b font-semibold text-sm">Cantidad</th>
+              <th className="text-right p-2 border-b font-semibold text-sm">Importe</th>
+              <th className="text-center p-2 border-b font-semibold text-sm">Existencia</th>
+              <th className="text-center p-2 border-b font-semibold text-sm">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center p-8 text-gray-500">
+                <td colSpan={7} className="text-center p-6 text-gray-500">
                   No hay productos en el ticket actual
                 </td>
               </tr>
@@ -55,26 +55,26 @@ export default function ProductTable({
                     ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}
                   `}
                 >
-                  <td className="p-3 border-b font-mono">{item.sku}</td>
-                  <td className="p-3 border-b">{item.name}</td>
-                  <td className="p-3 border-b text-right font-mono">
+                  <td className="p-2 border-b font-mono text-sm">{item.sku}</td>
+                  <td className="p-2 border-b text-sm">{item.name}</td>
+                  <td className="p-2 border-b text-right font-mono text-sm">
                     {formatCurrency(item.salePrice)}
                   </td>
-                  <td className="p-3 border-b text-center">
+                  <td className="p-2 border-b text-center">
                     <input
                       type="number"
                       min="1"
                       value={item.quantity}
                       onChange={(e) => onQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                      className="w-16 p-1 border rounded text-center"
+                      className="w-14 p-1 border rounded text-center text-sm"
                     />
                   </td>
-                  <td className="p-3 border-b text-right font-mono font-semibold">
+                  <td className="p-2 border-b text-right font-mono font-semibold text-sm">
                     {formatCurrency(item.total)}
                   </td>
-                  <td className="p-3 border-b text-center">
+                  <td className="p-2 border-b text-center">
                     <span className={`
-                      px-2 py-1 rounded text-sm
+                      px-2 py-1 rounded text-xs
                       ${item.stock <= 5 ? 'bg-red-100 text-red-800' : 
                         item.stock <= 10 ? 'bg-yellow-100 text-yellow-800' : 
                         'bg-green-100 text-green-800'}
@@ -82,10 +82,10 @@ export default function ProductTable({
                       {item.stock}
                     </span>
                   </td>
-                  <td className="p-3 border-b text-center">
+                  <td className="p-2 border-b text-center">
                     <button
                       onClick={() => onRemoveItem(item.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm transition-colors"
+                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors"
                     >
                       Eliminar
                     </button>

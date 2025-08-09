@@ -5,13 +5,15 @@ interface ProductInputProps {
   onSearchProduct: () => void;
   productCode: string;
   setProductCode: (code: string) => void;
+  selectedClient?: any;
 }
 
 export default function ProductInput({
   onAddProduct,
   onSearchProduct,
   productCode,
-  setProductCode
+  setProductCode,
+  selectedClient
 }: ProductInputProps) {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -21,6 +23,15 @@ export default function ProductInput({
 
   return (
     <div className="bg-white p-4 border-b">
+      {/* Indicador de Cliente */}
+      {selectedClient && (
+        <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded">
+          <span className="text-sm font-medium text-blue-800">
+            Cliente: {selectedClient.name} {selectedClient.rtn ? `- RTN: ${selectedClient.rtn}` : ''}
+          </span>
+        </div>
+      )}
+      
       <div className="flex items-center space-x-4 mb-4">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-2">
